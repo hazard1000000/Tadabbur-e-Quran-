@@ -13,10 +13,66 @@ jobs:
         with: { channel: stable, cache: true }
       - name: Unpack source
         run: python3 -m zipfile -e "tadabbur_quran_v6 (1).zip" .
-      - name: Fix app.dart
+      - name: Write fixed app.dart
         run: |
-          sed -i 's/localizationsDelegates: const \[/localizationsDelegates: [/' lib/app.dart
-          sed -i 's/KuMaterialLocalizations\.delegate/const KuMaterialLocalizationsDelegate()/' lib/app.dart
+          cat > lib/app.dart << 'DARTEOF'
+          import 'package:flutter/material.dart';
+          import 'package:flutter_localizations/flutter_localizations.dart';
+          import 'package:flutter_bloc/flutter_bloc.dart';
+
+          import 'core/constants/app_constants.dart';
+          import 'core/router/app_router.dart';
+          import 'core/theme/app_text_styles.dart';
+          import 'core/theme/app_theme.dart';
+          import 'features/settings/presentation/bloc/settings_cubit.dart';
+
+          class TadabburApp extends StatelessWidget {
+            const TadabburApp({super.key});
+
+            @override
+            Widget build(BuildContext context) {
+              return BlocProvider(
+                create: (_) => SettingsCubit(),
+                child: Builder(
+                  builder: (context) {
+                    final settings = context.watch<SettingsCubit>().state;
+                    return MaterialApp.router(
+                      title: AppConstants.appName,
+                      debugShowCheckedModeBanner: false,
+                      builder: (context, child) => Directionality(
+                        textDirection: TextDirection.rtl,
+                        child: DefaultTextHeightBehavior(
+                          textHeightBehavior: AppTextStyles.heightBehavior,
+                          child: child ?? const SizedBox.shrink(),
+                        ),
+                      ),
+                      locale: settings.locale,
+                      supportedLocales: const [Locale('ku'), Locale('ar'), Locale('en')],
+                      localizationsDelegates: const [
+                        GlobalMaterialLocalizations.delegate,
+                        GlobalWidgetsLocalizations.delegate,
+                        GlobalCupertinoLocalizations.delegate,
+                      ],
+                      localeResolutionCallback: (deviceLocale, supported) {
+                        if (deviceLocale == null) return const Locale('ar');
+                        for (final l in supported) {
+                          if (l.languageCode == deviceLocale.languageCode) {
+                            return l.languageCode == 'ku' ? const Locale('ar') : l;
+                          }
+                        }
+                        return const Locale('ar');
+                      },
+                      theme: AppTheme.lightTheme(context),
+                      darkTheme: AppTheme.darkTheme(context),
+                      themeMode: settings.themeMode,
+                      routerConfig: AppRouter.router,
+                    );
+                  },
+                ),
+              );
+            }
+          }
+          DARTEOF
       - name: Fetch fonts
         run: |
           mkdir -p assets/fonts
