@@ -14,7 +14,7 @@ jobs:
       - name: Unpack source
         run: python3 -m zipfile -e "tadabbur_quran_v6 (1).zip" .
       - name: Fix app.dart const list
-        run: sed -i 's/localizationsDelegates: const \[/localizationsDelegates: [/' lib/app.dart
+        run: 'sed -i ''s/localizationsDelegates: const \[/localizationsDelegates: [/'' lib/app.dart'
       - name: Fetch fonts
         run: |
           mkdir -p assets/fonts
